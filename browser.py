@@ -32,15 +32,15 @@ class Browser:
 
         # input player name
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/input').send_keys(player_name)
-        sleep(1)
+        sleep(0.5)
 
         # disable animation
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/div[1]/button/div').click()
-        sleep(1)
+        sleep(0.5)
 
         # click Solo Play
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/div[2]/a[1]/button').click()
-        sleep(1)
+        sleep(0.5)
 
     def set_canvas(self):
         self.canvas = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/canvas')
@@ -48,11 +48,6 @@ class Browser:
     def _get_driver(self, chromedriver_path: str):
         print('Initialize ChromeDriver Start...')
         chrome_options = webdriver.ChromeOptions()
-        # chrome_options.add_argument("headless")
-        # chrome_options.add_argument("window-size=1280x900")
-        # chrome_options.add_argument("--no-sandbox")
-        # chrome_options.add_argument("disable-gpu")
-        # chrome_options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(chromedriver_path, chrome_options=chrome_options)
         sleep(5)
         print('Initialize ChromeDriver Complete...')
@@ -118,4 +113,4 @@ class Browser:
         self.turn = 0
         self.timestamp = datetime.datetime.now().timestamp()
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/a[1]/button').click()
-        sleep(1)
+        sleep(0.5)
