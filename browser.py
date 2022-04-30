@@ -20,8 +20,8 @@ class Browser:
     tile_height = None
     timestamp = None
 
-    def __init__(self, chromedriver_path: str):
-        self.driver = self._get_driver(chromedriver_path)
+    def __init__(self, chromedriver_path: str, headless: bool):
+        self.driver = self._get_driver(chromedriver_path, headless)
 
     def setup(self, player_name):
         url = 'http://s0af.panty.run/'
@@ -45,9 +45,15 @@ class Browser:
     def set_canvas(self):
         self.canvas = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/canvas')
 
-    def _get_driver(self, chromedriver_path: str):
+    def _get_driver(self, chromedriver_path: str, headless: bool):
         print('Initialize ChromeDriver Start...')
         chrome_options = webdriver.ChromeOptions()
+        if headless:
+            chrome_options.add_argument("headless")
+            chrome_options.add_argument("window-size=1280x900")
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("disable-gpu")
+            chrome_options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(chromedriver_path, chrome_options=chrome_options)
         sleep(5)
         print('Initialize ChromeDriver Complete...')
@@ -76,7 +82,7 @@ class Browser:
         if not self.tile_width or not self.tile_height:
             self.tile_width, self.tile_height = int(self.canvas_width / x_cnt), int(self.canvas_height / y_cnt)
         pixels = image.load()
-        return [[self.get_color(pixels, i, j) for i in range(x_cnt)] for j in range(y_cnt)]
+        return [self.get_color(pixels, i, j) for j in range(y_cnt) for i in range(x_cnt)]
 
     def save_image(self, filename):
         self.canvas.screenshot(filename)
@@ -86,17 +92,17 @@ class Browser:
         y = (j + 0.5) * self.tile_height
         r, g, b, a = pixels[x, y]
         if r == 0 and g == 255 and b == 161:
-            return 0  # green
+            return 1  # green
         elif r == 255 and g == 161 and b == 0:
-            return 1  # orange
+            return 2  # orange
         elif r == 0 and g == 161 and b == 255:
-            return 2  # blue
-        return 3  # white
+            return 3  # blue
+        return 0  # white
 
     def play_turn(self, i, j):
         ac = ActionChains(self.driver)
-        x = self.canvas_width - (i + 0.5) * self.tile_width
-        y = self.canvas_height - (j + 0.5) * self.tile_height
+        x = (i + 0.5) * self.tile_width
+        y = (j + 0.5) * self.tile_height
         ac.move_to_element(self.canvas).move_by_offset(-self.canvas_width / 2, -self.canvas_height / 2).move_by_offset(x, y).click().perform()
         time.sleep(0.5)
         self.turn += 1
