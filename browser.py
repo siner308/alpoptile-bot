@@ -12,7 +12,6 @@ from selenium import webdriver
 class Browser:
     driver = None
     name = None
-    turn = None
     canvas = None
     canvas_width = None
     canvas_height = None
@@ -27,7 +26,6 @@ class Browser:
         url = 'http://s0af.panty.run/'
         self.driver.get(url)
         self.name = player_name
-        self.turn = 0
         self.timestamp = datetime.datetime.now().timestamp()
 
         # input player name
@@ -35,8 +33,8 @@ class Browser:
         sleep(0.5)
 
         # disable animation
-        self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/div[1]/button/div').click()
-        sleep(0.5)
+        # self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/div[1]/button/div').click()
+        # sleep(0.5)
 
         # click Solo Play
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/div[2]/a[1]/button').click()
@@ -62,14 +60,14 @@ class Browser:
     def is_gameover(self):
         return 'result' in self.driver.current_url
 
-    def get_canvas_state(self):
-        if self.name is None or self.turn is None:
+    def get_canvas_state(self, turn):
+        if self.name is None:
             print('not initialized error')
             raise ValueError
 
         path = pathlib.Path(__file__).parent
 
-        filename = path / 'screenshots' / f'{self.name}-{self.timestamp}-{self.turn}.png'
+        filename = path / 'screenshots' / f'{self.name}-{self.timestamp}-{turn}.png'
         filename = str(filename)
         self.save_image(filename=filename)
         return self.get_pixel_grid(filename=filename, x_cnt=8, y_cnt=15)
@@ -91,11 +89,11 @@ class Browser:
         x = (i + 0.5) * self.tile_width
         y = (j + 0.5) * self.tile_height
         r, g, b, a = pixels[x, y]
-        if r == 0 and g == 255 and b == 161:
+        if r == 0 and g == 255 and b == 171:
             return 1  # green
-        elif r == 255 and g == 161 and b == 0:
+        elif r == 255 and g == 171 and b == 0:
             return 2  # orange
-        elif r == 0 and g == 161 and b == 255:
+        elif r == 0 and g == 171 and b == 255:
             return 3  # blue
         return 0  # white
 
@@ -104,8 +102,7 @@ class Browser:
         x = (i + 0.5) * self.tile_width
         y = (j + 0.5) * self.tile_height
         ac.move_to_element(self.canvas).move_by_offset(-self.canvas_width / 2, -self.canvas_height / 2).move_by_offset(x, y).click().perform()
-        time.sleep(0.5)
-        self.turn += 1
+        time.sleep(1)
         if self.is_gameover():
             score_element = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/h1')
             score = int(score_element.text)
@@ -116,7 +113,6 @@ class Browser:
         return False, score
 
     def retry(self):
-        self.turn = 0
         self.timestamp = datetime.datetime.now().timestamp()
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/a[1]/button').click()
         sleep(0.5)

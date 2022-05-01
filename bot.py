@@ -8,10 +8,14 @@ class Bot:
     def __init__(self, num_states, num_actions, path=None):
         self.num_states = num_states
         self.num_actions = num_actions
-        self.alpha = 0.001
-        self.gamma = 0.99
+        self.alpha = 0.0001
+        # self.gamma = 0.99
         self.set_model(path)
-        self.optimizer = optim.Adam(params=self.pi.parameters(), lr=self.alpha)
+        self.optimizer = optim.Adam(
+            params=self.pi.parameters(),
+            lr=self.alpha,
+            # eps=self.eps,
+        )
         self.memory = []
 
     def set_model(self, path):
@@ -28,7 +32,8 @@ class Bot:
     def act(self, state):
         with torch.no_grad():
             state = torch.FloatTensor(state)
-            policy_probs = torch.distributions.Categorical(self.pi(state))
+            probs = self.pi(state)
+            policy_probs = torch.distributions.Categorical(probs)
         return policy_probs.sample()
 
     def append_sample(self, state, action, reward):
@@ -52,7 +57,6 @@ class Bot:
         self.optimizer.step()
 
         self.memory = []
-        self.save_model(f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}")
         return policy_loss.item()
 
     def save_model(self, path):
