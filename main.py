@@ -3,18 +3,27 @@ import math
 import env
 from bot import Bot
 from browser import Browser
+from browser_mock import BrowserMock
 
 
 def run():
-    browser = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=True)
+    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
+    browser_mock = BrowserMock()
     name = f'alpoptile-bot'
-    browser.setup(name)
+    browser_real.setup(name)
+    browser_mock.setup(name)
     generation = None
     x_tile_cnt = 8
     y_tile_cnt = 15
     bot = Bot(x_tile_cnt * y_tile_cnt, x_tile_cnt * y_tile_cnt, './models/20220501_014831.model')
 
     while True:
+        real = cnt % 1000 == 0
+        if real:
+            browser = browser_real
+        else:
+            browser = browser_mock
+
         browser.set_canvas()
         prev_score = 0
 
