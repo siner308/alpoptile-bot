@@ -13,6 +13,7 @@ class Browser:
     driver = None
     name = None
     canvas = None
+    canvas_element = None
     canvas_width = None
     canvas_height = None
     tile_width = None
@@ -41,7 +42,7 @@ class Browser:
         sleep(0.5)
 
     def set_canvas(self):
-        self.canvas = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/canvas')
+        self.canvas_element = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/canvas')
 
     def _get_driver(self, chromedriver_path: str, headless: bool):
         print('Initialize ChromeDriver Start...')
@@ -80,10 +81,11 @@ class Browser:
         if not self.tile_width or not self.tile_height:
             self.tile_width, self.tile_height = int(self.canvas_width / x_cnt), int(self.canvas_height / y_cnt)
         pixels = image.load()
-        return [self.get_color(pixels, i, j) for j in range(y_cnt) for i in range(x_cnt)]
+        self.canvas = [[self.get_color(pixels, i, j) for i in range(x_cnt)] for j in range(y_cnt)]
+        return [cell for row in self.canvas for cell in row]
 
     def save_image(self, filename):
-        self.canvas.screenshot(filename)
+        self.canvas_element.screenshot(filename)
 
     def get_color(self, pixels, i, j):
         x = (i + 0.5) * self.tile_width
@@ -101,18 +103,52 @@ class Browser:
         ac = ActionChains(self.driver)
         x = (i + 0.5) * self.tile_width
         y = (j + 0.5) * self.tile_height
-        ac.move_to_element(self.canvas).move_by_offset(-self.canvas_width / 2, -self.canvas_height / 2).move_by_offset(x, y).click().perform()
+        ac.move_to_element(self.canvas_element).move_by_offset(-self.canvas_width / 2, -self.canvas_height / 2).move_by_offset(x, y).click().perform()
         time.sleep(1)
+
+        reward = self.click(i, j, target_color=self.canvas[j][i])
+
+        for j in range(15):
+            for i in range(8):
+                if self.canvas[j][i] == -1:
+                    self.canvas[j][i] = 0
+
+        while True:
+            breakable = True
+            for j in range(14):
+                for i in range(8):
+                    if self.canvas[j][i] != 0 and self.canvas[j + 1][i] == 0:
+                        self.canvas[j][i], self.canvas[j + 1][i] = self.canvas[j + 1][i], self.canvas[j][i]
+                        breakable = False
+
+            if breakable:
+                break
+
         if self.is_gameover():
             score_element = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/h1')
             score = int(score_element.text)
-            return True, score
+            return True, score, self.canvas
 
         score_element = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/span')
         score = int(score_element.text.split(': ')[1])
-        return False, score
+        return False, score, self.canvas
 
     def retry(self):
         self.timestamp = datetime.datetime.now().timestamp()
         self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/a[1]/button').click()
         sleep(0.5)
+
+    def click(self, i, j, target_color):
+        if i >= 8 or i < 0 or j >= 15 or j < 0:
+            return 0
+        if self.canvas[j][i] != target_color:
+            return 0
+
+        self.canvas[j][i] = -1
+        reward = 1
+
+        reward += self.click(i + 1, j, target_color)
+        reward += self.click(i - 1, j, target_color)
+        reward += self.click(i, j + 1, target_color)
+        reward += self.click(i, j - 1, target_color)
+        return reward

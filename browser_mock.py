@@ -33,12 +33,9 @@ class BrowserMock:
             print('not initialized error')
             raise ValueError
 
-        for j in range(1, 15, 1):
-            self.canvas[j - 1] = self.canvas[j]
+        self.canvas = self.canvas[1:]
+        self.canvas.append(self.generate_new_row())
 
-        self.canvas[-1] = self.generate_new_row()
-        if math.isnan(self.canvas[0][0]):
-            print('nan is detected')
         return [cell for row in self.canvas for cell in row]
 
     def generate_new_row(self):
@@ -67,9 +64,9 @@ class BrowserMock:
                 break
 
         if self.is_gameover():
-            return True, self.score
+            return True, self.score, self.canvas
 
-        return False, self.score
+        return False, self.score, self.canvas
 
     def retry(self):
         self.turn = 0
