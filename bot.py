@@ -9,12 +9,13 @@ class Bot:
         self.num_states = num_states
         self.num_actions = num_actions
         self.alpha = 0.0001
-        # self.gamma = 0.99
+        # self.eps = 0.00000001
+        self.eps = 1e-8
         self.set_model(path)
         self.optimizer = optim.Adam(
             params=self.pi.parameters(),
             lr=self.alpha,
-            # eps=self.eps,
+            eps=self.eps,
         )
         self.memory = []
 
@@ -64,11 +65,11 @@ class Bot:
 
     def load_model(self, path=None):
         self.pi = nn.Sequential(
-            nn.Linear(self.num_states, 32),
+            nn.Linear(self.num_states, 512),
             nn.ReLU(),
-            nn.Linear(32, 32),
+            nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Linear(32, self.num_actions),
+            nn.Linear(512, self.num_actions),
             nn.Softmax(),
         )
         if path:
