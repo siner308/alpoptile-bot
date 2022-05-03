@@ -10,7 +10,7 @@ class Bot:
         self.num_actions = num_actions
         self.alpha = 0.0001
         # self.eps = 0.00000001
-        self.eps = 1e-8
+        self.eps = 0.001
         self.set_model(path)
         self.optimizer = optim.Adam(
             params=self.pi.parameters(),
