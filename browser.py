@@ -92,12 +92,18 @@ class Browser:
         x = (i + 0.5) * self.tile_width
         y = (j + 0.5) * self.tile_height
         r, g, b, a = pixels[x, y]
-        if r == 0 and g == 255 and b == 161:
-            return 1  # green
-        elif r == 255 and g == 161 and b == 0:
-            return 2  # orange
-        elif r == 0 and g == 161 and b == 255:
-            return 3  # blue
+        if g > r and g > b:
+            return 1
+        if r > g and r > b:
+            return 2
+        if b > r and b > g:
+            return 3
+        # if r == 0 and g == 255 and b == 161:
+        #     return 1  # green
+        # elif r == 255 and g == 161 and b == 0:
+        #     return 2  # orange
+        # elif r == 0 and g == 161 and b == 255:
+        #     return 3  # blue
         return 0  # white
 
     def play_turn(self, i, j):
