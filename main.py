@@ -11,9 +11,10 @@ from browser_mock import BrowserMock
 
 def run():
     cnt = 1
-    agent_cnt = 20
-    bot_path = './models/20220504_001025.model'
-    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=True)
+    agent_cnt = 1000
+    bot_path = None
+    bot_path = './models/20220504_021028.model'
+    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
     name = f'alpoptile-bot'
     browser_real.setup(name)
     x_tile_cnt = 8
@@ -26,13 +27,15 @@ def run():
         total_scores = []
         for i, browser, agent in zip(range(agent_cnt), browsers, agents):
             min_score, max_score, avg_score = train(browser, agent, is_training=True)
-            total_score = (min_score * 5) + (max_score / 5) + avg_score
-            print(f'[{i}] min: {min_score} avg: {avg_score} max: {max_score} total: {total_score}')
+            # total_score = (min_score * 5) + (max_score / 5) + avg_score
+            total_score = min_score
+            # print(f'[{i}] min: {min_score} avg: {avg_score} max: {max_score} total: {total_score}')
+            # print(f'[{i}] {min_score}')
             total_scores.append(total_score)
 
         next_gen = max(total_scores)
         next_gen_idx = total_scores.index(next_gen)
-        print(f'[{next_gen_idx}] is next generation')
+        print(f'[{cnt}th gen] [{next_gen_idx}] score: {total_scores[next_gen_idx]} is next generation')
 
         next_bot = agents[next_gen_idx]
         bot_path = f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}"
@@ -46,7 +49,7 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
     max_score = 0
     scores = []
 
-    repeat_cnt = 100 if is_training else 1
+    repeat_cnt = 1 if is_training else 1
 
     for gen in range(repeat_cnt):
         browser.set_canvas()
@@ -80,7 +83,7 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
             reward = 0
             # 기본 제공 점수
             removed_block_cnt = (current_score - prev_score) ** 0.5
-            reward += removed_block_cnt
+            reward += removed_block_cnt ** 2
 
             # 높이 분산값
             heights = []
@@ -96,7 +99,9 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
 
             mean_height = numpy.mean(heights)
             variance = numpy.mean([(mean_height - height) ** 2 for height in heights])
-            reward -= variance * 1
+            total_tile_cnt = sum(heights)
+            reward -= total_tile_cnt / 12  # 평균높이
+            reward -= 10 * variance  # 분산
 
             # 8개씩 추가되는데, 8개 이상 지우지 못하면 안좋다는 것을 알려줌
             # reward += (removed_block_cnt - 8) * variance / 8
