@@ -43,6 +43,7 @@ class Browser:
 
     def set_canvas(self):
         self.canvas_element = self.driver.find_element(by=By.XPATH, value='//*[@id="root"]/div/div/canvas')
+        sleep(0.5)
 
     def _get_driver(self, chromedriver_path: str, headless: bool):
         print('Initialize ChromeDriver Start...')
@@ -82,7 +83,7 @@ class Browser:
             self.tile_width, self.tile_height = int(self.canvas_width / x_cnt), int(self.canvas_height / y_cnt)
         pixels = image.load()
         self.canvas = [[self.get_color(pixels, i, j) for i in range(x_cnt)] for j in range(y_cnt)]
-        return [cell for row in self.canvas for cell in row]
+        return self.canvas
 
     def save_image(self, filename):
         self.canvas_element.screenshot(filename)
@@ -91,11 +92,11 @@ class Browser:
         x = (i + 0.5) * self.tile_width
         y = (j + 0.5) * self.tile_height
         r, g, b, a = pixels[x, y]
-        if r == 0 and g == 255 and b == 171:
+        if r == 0 and g == 255 and b == 161:
             return 1  # green
-        elif r == 255 and g == 171 and b == 0:
+        elif r == 255 and g == 161 and b == 0:
             return 2  # orange
-        elif r == 0 and g == 171 and b == 255:
+        elif r == 0 and g == 161 and b == 255:
             return 3  # blue
         return 0  # white
 

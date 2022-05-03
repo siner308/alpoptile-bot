@@ -65,11 +65,11 @@ class Bot:
 
     def load_model(self, path=None):
         self.pi = nn.Sequential(
-            nn.Linear(self.num_states, 512),
+            nn.Linear(self.num_states, 32),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(32, 32),
             nn.ReLU(),
-            nn.Linear(512, self.num_actions),
+            nn.Linear(32, self.num_actions),
             nn.Softmax(),
         )
         if path:

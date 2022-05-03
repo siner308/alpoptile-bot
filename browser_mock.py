@@ -14,8 +14,7 @@ class BrowserMock:
     tile_height = None
     timestamp = None
 
-    def setup(self, player_name):
-        self.name = player_name
+    def __init__(self):
         self.score = 0
         self.timestamp = datetime.datetime.now().timestamp()
 
@@ -29,14 +28,9 @@ class BrowserMock:
         return False
 
     def get_canvas_state(self, turn):
-        if self.name is None:
-            print('not initialized error')
-            raise ValueError
-
         self.canvas = self.canvas[1:]
         self.canvas.append(self.generate_new_row())
-
-        return [cell for row in self.canvas for cell in row]
+        return self.canvas
 
     def generate_new_row(self):
         return [random.randrange(1, 4, 1) for i in range(8)]

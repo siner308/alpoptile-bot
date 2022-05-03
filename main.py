@@ -1,5 +1,5 @@
 import datetime
-import math
+import time
 
 import numpy
 
@@ -11,47 +11,67 @@ from browser_mock import BrowserMock
 
 def run():
     cnt = 1
-    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
-    browser_mock = BrowserMock()
+    agent_cnt = 20
+    bot_path = './models/20220504_001025.model'
+    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=True)
     name = f'alpoptile-bot'
     browser_real.setup(name)
-    browser_mock.setup(name)
-    generation = None
     x_tile_cnt = 8
     y_tile_cnt = 15
-    bot = Bot(x_tile_cnt * y_tile_cnt, x_tile_cnt * y_tile_cnt)
+    browsers = [BrowserMock() for _ in range(agent_cnt)]
 
+    for _ in range(100):
+        agents = [Bot(x_tile_cnt * y_tile_cnt, x_tile_cnt * y_tile_cnt, bot_path) for _ in range(agent_cnt)]
+
+        total_scores = []
+        for i, browser, agent in zip(range(agent_cnt), browsers, agents):
+            min_score, max_score, avg_score = train(browser, agent, is_training=True)
+            total_score = (min_score * 5) + (max_score / 5) + avg_score
+            print(f'[{i}] min: {min_score} avg: {avg_score} max: {max_score} total: {total_score}')
+            total_scores.append(total_score)
+
+        next_gen = max(total_scores)
+        next_gen_idx = total_scores.index(next_gen)
+        print(f'[{next_gen_idx}] is next generation')
+
+        next_bot = agents[next_gen_idx]
+        bot_path = f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}"
+        next_bot.save_model(bot_path)
+        train(browser_real, next_bot, is_training=False)
+        cnt += 1
+
+
+def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
+    min_score = 99999999
+    max_score = 0
     scores = []
-    while True:
-        real = cnt % 10000 == 0
-        need_update = cnt % 100 == 0
-        if need_update:
-            print(f'평균: {numpy.mean(scores)}')
 
-        if real:
-            browser = browser_real
-        else:
-            browser = browser_mock
+    repeat_cnt = 100 if is_training else 1
 
+    for gen in range(repeat_cnt):
         browser.set_canvas()
+        turn = 0
         prev_score = 0
 
-        generation = 1 if generation is None else generation + 1
-        turn = 0
         while True:
             turn += 1
             white_click_cnt = 0
-            state = browser.get_canvas_state(turn)
+            canvas = browser.get_canvas_state(turn)
+            state = [cell for row in canvas for cell in row]
+
             while True:
                 action = bot.act(state)
                 value = action.tolist()
                 i = value % 8
                 j = int(value / 8)
-                if state[j * 8 + i] != 0:
+                if canvas[j][i] != 0:
                     break
                 else:
-                    white_click_cnt += 1
-                    bot.append_sample(state, action, -1)
+                    if is_training:
+                        white_click_cnt += 1
+                        bot.append_sample(state, action, -1)
+                    continue
+
             is_gameover, current_score, canvas = browser.play_turn(int(i), int(j))
 
             """
@@ -59,14 +79,15 @@ def run():
             """
             reward = 0
             # 기본 제공 점수
-            reward += current_score - prev_score
+            removed_block_cnt = (current_score - prev_score) ** 0.5
+            reward += removed_block_cnt
 
             # 높이 분산값
             heights = []
-            for i in range(8):
-                for j in range(15):
-                    if canvas[j][i] != 0:
-                        max_height = 15 - j
+            for _i in range(8):
+                for _j in range(15):
+                    if canvas[_j][_i] != 0:
+                        max_height = 15 - _j
                         heights.append(max_height)
                         break
             if len(heights) == 0:
@@ -75,37 +96,32 @@ def run():
 
             mean_height = numpy.mean(heights)
             variance = numpy.mean([(mean_height - height) ** 2 for height in heights])
-            reward -= variance
+            reward -= variance * 1
 
             # 8개씩 추가되는데, 8개 이상 지우지 못하면 안좋다는 것을 알려줌
-            # removed_block_cnt = reward ** 0.5
-            # reward += removed_block_cnt - 8
+            # reward += (removed_block_cnt - 8) * variance / 8
 
-            # 턴을 지속할수록 좋다는것을 알려줌
-            # reward += turn * 0.5
-
-            if real:
-                print(f'[{generation}] [{current_score}] white: {white_click_cnt} ({i}, {j}) {reward}')
             prev_score = current_score
 
             if is_gameover:
-                reward = -100
+                reward = -10
 
-            bot.append_sample(state, action, reward)
+            if is_training:
+                bot.append_sample(state, action, reward)
             if is_gameover:
-                # 엄청난 패널티 주고 다시 시작
-                # print('[gen: %s] [turn: %s] %s' % (generation, turn, prev_score))
+                if max_score < current_score:
+                    max_score = current_score
+                if min_score > current_score:
+                    min_score = current_score
                 break
 
         # 재시작
         scores.append(current_score)
-        cnt += 1
-        if need_update:
-            scores = []
+        if is_training:
             bot.update()
-            if real:
-                bot.save_model(f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}")
         browser.retry()
+
+    return min_score, max_score, numpy.mean(scores)
 
 
 if __name__ == '__main__':
