@@ -13,7 +13,7 @@ def run():
     cnt = 1
     agent_cnt = 1000
     bot_path = None
-    bot_path = './models/20220504_021028.model'
+    bot_path = './models/20220504_094125.model'
     browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
     name = f'alpoptile-bot'
     browser_real.setup(name)
@@ -21,7 +21,7 @@ def run():
     y_tile_cnt = 15
     browsers = [BrowserMock() for _ in range(agent_cnt)]
 
-    for _ in range(100):
+    while True:
         agents = [Bot(x_tile_cnt * y_tile_cnt, x_tile_cnt * y_tile_cnt, bot_path) for _ in range(agent_cnt)]
 
         total_scores = []
@@ -101,7 +101,7 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
             variance = numpy.mean([(mean_height - height) ** 2 for height in heights])
             total_tile_cnt = sum(heights)
             reward -= total_tile_cnt / 12  # 평균높이
-            reward -= 10 * variance  # 분산
+            # reward -= 10 * variance  # 분산
 
             # 8개씩 추가되는데, 8개 이상 지우지 못하면 안좋다는 것을 알려줌
             # reward += (removed_block_cnt - 8) * variance / 8
