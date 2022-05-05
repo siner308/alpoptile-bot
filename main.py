@@ -11,10 +11,10 @@ from browser_mock import BrowserMock
 
 def run():
     cnt = 1
-    agent_cnt = 1000
+    agent_cnt = 50
     bot_path = None
-    bot_path = './models/20220504_094125.model'
-    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
+    bot_path = './models/20220505_025609.model'
+    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=True)
     name = f'alpoptile-bot'
     browser_real.setup(name)
     x_tile_cnt = 8
@@ -22,13 +22,13 @@ def run():
     browsers = [BrowserMock() for _ in range(agent_cnt)]
 
     while True:
-        agents = [Bot(x_tile_cnt * y_tile_cnt, x_tile_cnt * y_tile_cnt, bot_path) for _ in range(agent_cnt)]
+        agents = [Bot(x_tile_cnt * y_tile_cnt * 4, x_tile_cnt * y_tile_cnt, bot_path) for _ in range(agent_cnt)]
 
         total_scores = []
         for i, browser, agent in zip(range(agent_cnt), browsers, agents):
             min_score, max_score, avg_score = train(browser, agent, is_training=True)
             # total_score = (min_score * 5) + (max_score / 5) + avg_score
-            total_score = min_score
+            total_score = avg_score
             # print(f'[{i}] min: {min_score} avg: {avg_score} max: {max_score} total: {total_score}')
             # print(f'[{i}] {min_score}')
             total_scores.append(total_score)
@@ -40,7 +40,7 @@ def run():
         next_bot = agents[next_gen_idx]
         bot_path = f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}"
         next_bot.save_model(bot_path)
-        train(browser_real, next_bot, is_training=False)
+        # train(browser_real, next_bot, is_training=False)
         cnt += 1
 
 
@@ -49,7 +49,7 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
     max_score = 0
     scores = []
 
-    repeat_cnt = 1 if is_training else 1
+    repeat_cnt = 30 if is_training else 1
 
     for gen in range(repeat_cnt):
         browser.set_canvas()
@@ -60,7 +60,16 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
             turn += 1
             white_click_cnt = 0
             canvas = browser.get_canvas_state(turn)
-            state = [cell for row in canvas for cell in row]
+
+            def parse_color(color):
+                if color == 1:
+                    return [1, 0, 0, 0]
+                if color == 2:
+                    return [0, 1, 0, 0]
+                if color == 3:
+                    return [0, 0, 1, 0]
+                return [0, 0, 0, 1]
+            state = [color for row in canvas for cell in row for color in parse_color(cell)]
 
             while True:
                 action = bot.act(state)
@@ -99,12 +108,26 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
 
             mean_height = numpy.mean(heights)
             variance = numpy.mean([(mean_height - height) ** 2 for height in heights])
-            total_tile_cnt = sum(heights)
-            reward -= total_tile_cnt / 12  # 평균높이
-            # reward -= 10 * variance  # 분산
+            # total_tile_cnt = sum(heights)
+            max_height = max(heights)
+
+            if removed_block_cnt == 1:
+                if max_height > 5:
+                    reward -= 5
+
+            if mean_height > 8:
+                reward -= 5  # 평균높이
+                if removed_block_cnt < 8:
+                    reward -= 5
+
+            if max_height > 10:
+                reward -= 5
+
+            if max_height > 12:
+                if variance > 1:
+                    reward -= 5  # 분산
 
             # 8개씩 추가되는데, 8개 이상 지우지 못하면 안좋다는 것을 알려줌
-            # reward += (removed_block_cnt - 8) * variance / 8
 
             prev_score = current_score
 
