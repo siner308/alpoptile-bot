@@ -8,9 +8,9 @@ class Bot:
     def __init__(self, num_states, num_actions, path=None):
         self.num_states = num_states
         self.num_actions = num_actions
-        self.alpha = 0.0001
+        self.alpha = 0.0000001
         # self.eps = 0.00000001
-        self.eps = 0.001
+        self.eps = 1 / num_states
         self.set_model(path)
         self.optimizer = optim.Adam(
             params=self.pi.parameters(),

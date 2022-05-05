@@ -11,12 +11,12 @@ from browser_mock import BrowserMock
 
 def run():
     cnt = 1
-    agent_cnt = 50
+    agent_cnt = 100
     bot_path = None
-    bot_path = './models/20220505_025609.model'
-    browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=True)
+    # bot_path = './models/20220506_001509.model'
+    # browser_real = Browser(chromedriver_path=env.CHROMEDRIVER_PATH, headless=False)
     name = f'alpoptile-bot'
-    browser_real.setup(name)
+    # browser_real.setup(name)
     x_tile_cnt = 8
     y_tile_cnt = 15
     browsers = [BrowserMock() for _ in range(agent_cnt)]
@@ -25,23 +25,30 @@ def run():
         agents = [Bot(x_tile_cnt * y_tile_cnt * 4, x_tile_cnt * y_tile_cnt, bot_path) for _ in range(agent_cnt)]
 
         total_scores = []
+        min_scores = []
+        max_scores = []
+        avg_scores = []
         for i, browser, agent in zip(range(agent_cnt), browsers, agents):
             min_score, max_score, avg_score = train(browser, agent, is_training=True)
             # total_score = (min_score * 5) + (max_score / 5) + avg_score
-            total_score = avg_score
+            total_score = min_score
             # print(f'[{i}] min: {min_score} avg: {avg_score} max: {max_score} total: {total_score}')
             # print(f'[{i}] {min_score}')
             total_scores.append(total_score)
+            min_scores.append(min_score)
+            avg_scores.append(avg_score)
+            max_scores.append(max_score)
 
         next_gen = max(total_scores)
         next_gen_idx = total_scores.index(next_gen)
-        print(f'[{cnt}th gen] [{next_gen_idx}] score: {total_scores[next_gen_idx]} is next generation')
+        print(f'[{cnt}th gen] [{next_gen_idx}] min: {min_scores[next_gen_idx]} avg: {avg_scores[next_gen_idx]} max: {max_scores[next_gen_idx]} is next generation')
 
         next_bot = agents[next_gen_idx]
         bot_path = f"./models/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S.model')}"
         next_bot.save_model(bot_path)
-        # train(browser_real, next_bot, is_training=False)
         cnt += 1
+        # if cnt % 2 == 0:
+        #     train(browser_real, next_bot, is_training=False)
 
 
 def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
@@ -49,7 +56,7 @@ def train(browser: BrowserMock or Browser, bot: Bot, is_training: bool):
     max_score = 0
     scores = []
 
-    repeat_cnt = 30 if is_training else 1
+    repeat_cnt = 100 if is_training else 1
 
     for gen in range(repeat_cnt):
         browser.set_canvas()
