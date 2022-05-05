@@ -13,7 +13,7 @@ class Bot:
         self.eps = 1 / num_states
         self.set_model(path)
         self.optimizer = optim.Adam(
-            params=self.pi.parameters(),
+            params=self.model.parameters(),
             lr=self.alpha,
             eps=self.eps,
         )
@@ -33,7 +33,7 @@ class Bot:
     def act(self, state):
         with torch.no_grad():
             state = torch.FloatTensor(state)
-            probs = self.pi(state)
+            probs = self.model(state)
             policy_probs = torch.distributions.Categorical(probs)
         return policy_probs.sample()
 
@@ -50,7 +50,7 @@ class Bot:
         returns = self.calculate_returns(rewards)
         returns = (returns - returns.mean()) / returns.std()
         self.optimizer.zero_grad()
-        policy_log_probs = self.pi(torch.FloatTensor(states)).log()
+        policy_log_probs = self.model(torch.FloatTensor(states)).log()
         policy_loss = torch.cat([-lp[a].unsqueeze(0) * g for a, lp, g in zip(actions, policy_log_probs, returns)])
         policy_loss = policy_loss.sum()
         policy_loss.backward()
@@ -61,10 +61,10 @@ class Bot:
         return policy_loss.item()
 
     def save_model(self, path):
-        torch.save(self.pi.state_dict(), path)
+        torch.save(self.model.state_dict(), path)
 
     def load_model(self, path=None):
-        self.pi = nn.Sequential(
+        self.model = nn.Sequential(
             nn.Linear(self.num_states, 32),
             nn.ReLU(),
             nn.Linear(32, 32),
@@ -72,6 +72,9 @@ class Bot:
             nn.Linear(32, self.num_actions),
             nn.Softmax(),
         )
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(device)
+        self.model.to(device)
         if path:
-            self.pi.load_state_dict(torch.load(path))
-            self.pi.eval()
+            self.model.load_state_dict(torch.load(path))
+            self.model.eval()
